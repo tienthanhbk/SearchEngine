@@ -1,0 +1,68 @@
+import os.path
+import json_lines
+import numpy as np
+import re
+from underthesea import word_tokenize
+
+# PATH_QUESTION_ANSWER = '/Users/tienthanh/Projects/ML/datapool/tgdd_qa/QA-example.jl'
+PATH_QUESTION_ANSWER = '/Users/tienthanh/Projects/ML/datapool/tgdd_qa/iphone-6-32gb-gold.jl'
+PATH_TO_STOPWORDS = '/Users/tienthanh/Projects/ML/SearchEngine/vietnamese-stopwords-dash.txt'
+
+
+def get_qa_by_id(arr_id_cmt):
+    with open(PATH_QUESTION_ANSWER) as f:
+        for qa in json_lines.reader(f):
+            if qa['id_cmt'] in arr_id_cmt:
+                yield qa
+
+
+def union_multi_arr(*args):
+    return set().union(*args)
+
+
+def save_result_to_file(query, results_id):
+    if not os.path.exists('search_result'):
+        os.mkdir('search_result')
+
+
+def is_valid_qa(qa):
+    if (qa['question'] is None) or (qa['answer'] is None) or (qa['id_cmt'] is None or (len(qa['question']) == 0) or (len(qa['answer']) == 0)):
+        return False
+    return True
+
+
+def customize_string(string):
+    replacer_arr = ['.', ',', '?', '\xa0', '\t']
+    string = string.lower().replace('\xa0', ' ')\
+        .replace('.', ' ').replace(',', ' ')\
+        .replace('?', ' ').replace('!', ' ')\
+        .replace('/', ' ').replace('-', '_') \
+        .replace(':', ' ') \
+        .strip()
+    string = re.sub('\s+', ' ', string).strip()
+    return word_tokenize(string, format="text")
+
+
+def get_stopwords():
+    with open(PATH_TO_STOPWORDS, 'r') as f:
+        return f.read().splitlines()
+
+
+def remove_stopword(string):
+    arr_stopword = get_stopwords()
+    arr_str = string.split(' ')
+    for str in arr_str:
+        if str in arr_stopword:
+            string = string.replace(str, '')
+    string = re.sub('\s+', ' ', string).strip()
+    return string
+
+
+def customize_and_remove_stopword(string):
+    string = customize_string(string)
+    string = remove_stopword(string)
+    return string
+
+print(len(""))
+
+print(is_valid_qa({"id_cmt": "24677370", "question": "Em muốn mua điện thoại và đang phân vân giữa J7 pro và ip6 anh có thể tư vấn giúp em k ạ?", "answer": ""}))
