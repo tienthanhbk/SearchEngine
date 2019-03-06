@@ -113,6 +113,8 @@ def cover_judged():
 def raw_query_pool():
     with open('./query_pool.json') as f:
         queries = json.load(f)
+        print("Current queries len: ", len(queries))
+        print("\n")
         arr_id = [query['id'] for query in queries]
         arr_id_checked = list(arr_id)
 
@@ -126,7 +128,7 @@ def raw_query_pool():
 
         user_judge = ''
 
-        while ((len(arr_id) != 11) and (user_judge != '0')):
+        while ((len(arr_id) != 100) and (user_judge != '0')):
             qa_checking = random.choice(arr_question_source)
             if qa_checking['id_cmt'] in arr_id_checked:
                 continue
@@ -144,6 +146,8 @@ def raw_query_pool():
                 'question': qa_checking['question'],
                 'searched': 0
             })
+            print("Current queries len: ", len(queries))
+            print("\n")
 
         with open('./query_pool.json', 'w') as outfile:
             json.dump(queries, outfile)
