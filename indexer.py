@@ -87,4 +87,3 @@ def index_ngram_word():
 index_basic()
 
 # print(get_stopwords())
-# TODO: indexing for new question - answer
