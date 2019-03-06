@@ -62,7 +62,3 @@ def customize_and_remove_stopword(string):
     string = customize_string(string)
     string = remove_stopword(string)
     return string
-
-print(len(""))
-
-print(is_valid_qa({"id_cmt": "24677370", "question": "Em muốn mua điện thoại và đang phân vân giữa J7 pro và ip6 anh có thể tư vấn giúp em k ạ?", "answer": ""}))

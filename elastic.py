@@ -42,12 +42,12 @@ def raw_index_file():
                 writer.write(doc)
 
 
-def get_search_result(query, page=0, size=10, field_search="question", **kwargs):
+def get_search_result(query_obj, page=0, size=10, field_search="question", **kwargs):
     es = Elasticsearch()
     body = {
         "query": {
             "match": {
-                field_search: query
+                field_search: query_obj['question']
             }
         },
         # "from": 1,
@@ -72,42 +72,17 @@ def get_search_result(query, page=0, size=10, field_search="question", **kwargs)
         raw_hits.append(raw_hit)
 
     raw_result = {
+        "id_query": query_obj['id'],
         "total": results['total'],
         "total_current": len(results['hits']),
         "max_score": results['max_score'],
-        "origin_question": query,
+        "origin_question": query_obj['question'],
         "hits": raw_hits
     }
-    print(raw_result)
-    with open('search_results.json', 'w') as outfile:
-        json.dump(raw_result, outfile)
 
-
-def cover_judged():
-    with open('./judged_1.json', 'r') as f:
-        data = json.load(f)
-        hits_cover = []
-        data["origin_question"] = data['hits'][0]['origin_question']
-        for hit in data['hits']:
-            hits_cover.append({
-                "score": hit['score'],
-                "id": hit['id'],
-                "field_search": hit['field_search'],
-                "question": hit['question_field']['question'],
-                "answer": hit['answer_field']['answer'],
-                "relate_q_q": hit['question_field']['related']
-            })
-        data_dunp = {
-            "total": data['total'],
-            "total_current": data['total_current'],
-            "max_score": data['max_score'],
-            "origin_question": data['hits'][0]['origin_question'],
-            "hits": hits_cover
-        }
-        print(data)
-        with open('judged_1_cover.json', 'w') as outfile:
-            json.dump(data_dunp, outfile)
-
+    return raw_result
+    # with open('search_results_exp.json', 'w') as outfile:
+    #     json.dump(raw_result, outfile)
 
 
 def raw_query_pool():
@@ -153,10 +128,16 @@ def raw_query_pool():
             json.dump(queries, outfile)
 
 
+def search_by_query_pool():
+    with open('./elastic/query_pool.json') as f:
+        queries = json.load(f)
+        for query_obj in queries:
+            if query_obj['searched'] != 0:
+                continue
+            raw_result = get_search_result(query_obj)
+            path = './elastic/search_result/' + str(query_obj['id']) + '.json'
+            with open(path, 'w') as outfile:
+                json.dump(raw_result, outfile)
 
 
-
-query = 'Samsung j6 với ip6 loại nào dùng được hơn ạ'
-# get_search_result(query=query)
-raw_query_pool()
-
+# search_by_query_pool()
