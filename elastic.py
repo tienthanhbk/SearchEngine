@@ -140,4 +140,34 @@ def search_by_query_pool():
                 json.dump(raw_result, outfile)
 
 
-# search_by_query_pool()
+def statistic_search_result():
+    import glob
+    judged_results_path = glob.glob("./elastic/judged/tmp/*.json")
+    count_questions = len(judged_results_path)
+    total_pair = 0
+    total_good = 0
+    total_useful = 0
+    notyet_judged = 0
+    total_bad = 0
+    for path in judged_results_path:
+        with open(path, 'r') as f:
+            # print(path)
+            judged_result = json.load(f)
+            # print(len(judged_result['hits']))
+            total_pair += len(judged_result['hits'])
+            notyet_judged += len([question for question in judged_result['hits'] if question['relate_q_q'] == 0])
+            total_good += len([question for question in judged_result['hits'] if question['relate_q_q'] == 2])
+            total_useful += len([question for question in judged_result['hits'] if question['relate_q_q'] == 1])
+            total_bad += len([question for question in judged_result['hits'] if question['relate_q_q'] == -1])
+            if notyet_judged > 0:
+                print(path)
+                break
+    print('notyet_judged: ', notyet_judged)
+    print('total_question: ', count_questions)
+    print('total_pair', total_pair)
+    print('total_good: ', total_good)
+    print('total_useful: ', total_useful)
+    print('total_bad: ', total_bad)
+
+
+statistic_search_result()

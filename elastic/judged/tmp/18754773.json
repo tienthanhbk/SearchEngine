@@ -1363,7 +1363,7 @@
       "field_search": "question",
       "question": "Cho mình hỏi sao máy iphone 6 của mình khi pin xuống 20% lại báo pin yếu bằng âm báo nhỉ",
       "answer": "Chào bạn,Với sản phẩm iPhone 6 thì khi còn 20% máy sẽ có thông báo là Pin yếu nha. Đây là tính năng mặc định bạn nhé. Thân -1 bạn !",
-      "relate_q_q": 0
+      "relate_q_q": -1
     },
     {
       "score": 8.6659355,
