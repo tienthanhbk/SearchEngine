@@ -149,25 +149,45 @@ def statistic_search_result():
     total_useful = 0
     notyet_judged = 0
     total_bad = 0
+
+    total_pair_2 = 0
+    total_good_2 = 0
+    total_useful_2 = 0
+    notyet_judged_2 = 0
+    total_bad_2 = 0
+
     for path in judged_results_path:
         with open(path, 'r') as f:
             # print(path)
             judged_result = json.load(f)
             # print(len(judged_result['hits']))
-            total_pair += len(judged_result['hits'])
+            # total_pair += len(judged_result['hits'])
             notyet_judged += len([question for question in judged_result['hits'] if question['relate_q_q'] == 0])
             total_good += len([question for question in judged_result['hits'] if question['relate_q_q'] == 2])
             total_useful += len([question for question in judged_result['hits'] if question['relate_q_q'] == 1])
             total_bad += len([question for question in judged_result['hits'] if question['relate_q_q'] == -1])
-            if notyet_judged > 0:
-                print(path)
-                break
-    print('notyet_judged: ', notyet_judged)
+            # if notyet_judged > 0:
+            #     print(path)
+            #     break
+            half_hits = judged_result['hits'][:len(judged_result['hits'])//2]
+            notyet_judged_2 += len([question for question in half_hits if question['relate_q_q'] == 0])
+            total_good_2 += len([question for question in half_hits if question['relate_q_q'] == 2])
+            total_useful_2 += len([question for question in half_hits if question['relate_q_q'] == 1])
+            total_bad_2 += len([question for question in half_hits if question['relate_q_q'] == -1])
+
+    # print('notyet_judged: ', notyet_judged)
     print('total_question: ', count_questions)
-    print('total_pair', total_pair)
-    print('total_good: ', total_good)
-    print('total_useful: ', total_useful)
-    print('total_bad: ', total_bad)
+    total_pair = total_good + total_useful + total_bad
+    print('total_pair: ', total_pair)
+    print('total_good: %d - %f' % (total_good, (total_good * 100 / total_pair)))
+    print('total_useful: %d - %f' % (total_useful, (total_useful * 100 / total_pair)))
+    print('total_bad: %d - %f' % (total_bad, (total_bad * 100 / total_pair)))
+    print('------------------------------')
+    total_pair_2 = total_good_2 + total_useful_2 + total_bad_2
+    print('total_pair_half: ', total_pair_2)
+    print('total_good_half: %d - %f' % (total_good_2, (total_good_2 * 100 / total_pair_2)))
+    print('total_useful_half: %d - %f' % (total_useful_2, (total_useful_2 * 100 / total_pair_2)))
+    print('total_bad_half: %d - %f' % (total_bad_2, (total_bad_2 * 100 / total_pair_2)))
 
 
 statistic_search_result()
