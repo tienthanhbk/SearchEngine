@@ -62,3 +62,14 @@ def customize_and_remove_stopword(string):
     string = customize_string(string)
     string = remove_stopword(string)
     return string
+
+
+def caculate_AP(arr):
+    AP = 0
+    relevan_len = len([val for val in arr if val == 1])
+    precision_threshold = 0
+    for index, val in enumerate(arr):
+        if val == 1:
+            precision_threshold += 1
+            AP += precision_threshold / (index + 1) / relevan_len
+    return AP

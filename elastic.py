@@ -1,9 +1,13 @@
 import jsonlines
-import os.path
-from convenion import *
+import convenion
 from elasticsearch import Elasticsearch
 import json
 import random
+import glob
+import numpy as np
+import pandas as pd
+from pandas import DataFrame, Series
+
 
 PATH_QUESTION_ANSWER = '/Users/tienthanh/Projects/ML/datapool/tgdd_qa/iphone-6-32gb-gold.jl'
 # PATH_QUESTION_ANSWER = '/Users/tienthanh/Projects/ML/datapool/tgdd_qa/QA-example.jl'
@@ -16,15 +20,15 @@ def raw_index_file():
     with jsonlines.open(PATH_QUESTION_ANSWER_INDEXER, mode='w') as writer:
         with jsonlines.open(PATH_QUESTION_ANSWER) as reader:
             for qa in reader:
-                if not is_valid_qa(qa):
+                if not convenion.is_valid_qa(qa):
                     continue
                 id_doc = qa['id_cmt']
                 question = qa['question']
                 answer = qa['answer']
-                question_custom = customize_string(question)
-                answer_custom = customize_string(answer)
-                question_removed_stopword = customize_and_remove_stopword(question)
-                answer_removed_stopword = customize_and_remove_stopword(answer)
+                question_custom = convenion.customize_string(question)
+                answer_custom = convenion.customize_string(answer)
+                question_removed_stopword = convenion.customize_and_remove_stopword(question)
+                answer_removed_stopword = convenion.customize_and_remove_stopword(answer)
                 # print(question_custom)
                 # print(answer_custom)
                 # print(question_removed_stopword)
@@ -96,14 +100,14 @@ def raw_query_pool():
         arr_question_source = []
         with jsonlines.open(PATH_QUESTION_ANSWER) as reader:
             for qa in reader:
-                if not is_valid_qa(qa):
+                if not convenion.is_valid_qa(qa):
                     continue
                 arr_question_source.append(qa)
             print(random.choice(arr_question_source))
 
         user_judge = ''
 
-        while ((len(arr_id) != 100) and (user_judge != '0')):
+        while (len(arr_id) != 100) and (user_judge != '0'):
             qa_checking = random.choice(arr_question_source)
             if qa_checking['id_cmt'] in arr_id_checked:
                 continue
@@ -141,7 +145,6 @@ def search_by_query_pool():
 
 
 def statistic_search_result():
-    import glob
     judged_results_path = glob.glob("./elastic/judged/tmp/*.json")
     count_questions = len(judged_results_path)
     total_pair = 0
@@ -190,4 +193,35 @@ def statistic_search_result():
     print('total_bad_half: %d - %f' % (total_bad_2, (total_bad_2 * 100 / total_pair_2)))
 
 
+def caculate_AP(path):
+    with open(path, 'r') as f:
+        search_result = json.load(f)
+        hits = search_result['hits']
+        arr_denote = []
+        for hit in hits:
+            if hit['relate_q_q'] == 3:
+                continue
+            if hit['relate_q_q'] == 2 or hit['relate_q_q'] == 1:
+                arr_denote.append(1)
+            if hit['relate_q_q'] == -1:
+                arr_denote.append(0)
+        return convenion.caculate_AP(arr_denote)
+
+
+def caculate_mAP():
+    paths = glob.glob("./elastic/judged/tmp/*.json")
+    arr_AP = []
+    for path in paths:
+        arr_AP.append(caculate_AP(path))
+    print(arr_AP)
+    nparr_AP = np.array(arr_AP)
+    print('mAP: ', nparr_AP.mean())
+    print('max AP: ', nparr_AP.max())
+    print('min AP: ', nparr_AP.min())
+    print('radian AP: ', np.median(nparr_AP))
+
+    print('sort: ', np.sort(nparr_AP))
+    dfarr_ap = DataFrame()
+
 statistic_search_result()
+caculate_mAP()
