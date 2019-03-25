@@ -6,7 +6,7 @@ from underthesea import word_tokenize
 
 # PATH_QUESTION_ANSWER = '/Users/tienthanh/Projects/ML/datapool/tgdd_qa/QA-example.jl'
 PATH_QUESTION_ANSWER = '/Users/tienthanh/Projects/ML/datapool/tgdd_qa/iphone-6-32gb-gold.jl'
-PATH_TO_STOPWORDS = '/Users/tienthanh/Projects/ML/SearchEngine/vietnamese-stopwords-dash.txt'
+PATH_TO_STOPWORDS = '/Users/tienthanh/Projects/ML/QAAutomation/vietnamese-stopwords-dash.txt'
 
 
 def get_qa_by_id(arr_id_cmt):
@@ -73,3 +73,5 @@ def caculate_AP(arr):
             precision_threshold += 1
             AP += precision_threshold / (index + 1) / relevan_len
     return AP
+
+print('assad')

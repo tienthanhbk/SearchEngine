@@ -205,6 +205,8 @@ def caculate_AP(path):
                 arr_denote.append(1)
             if hit['relate_q_q'] == -1:
                 arr_denote.append(0)
+        # if convenion.caculate_AP(arr_denote) < 0.5:
+        #     print('Path: ', path)
         return convenion.caculate_AP(arr_denote)
 
 
