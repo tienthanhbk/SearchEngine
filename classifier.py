@@ -51,7 +51,7 @@ def train_model(X_train, y_train, X_test, y_test):
 def raw_data():
     PATH_JUDGED = 'elastic/judged/tmp/17630743.json'
 
-    doc2vec_model = model = Doc2Vec.load('gensim/model/question.d2v')
+    doc2vec_model = Doc2Vec.load('gensim/model/question.d2v')
 
     with open(PATH_JUDGED, 'r') as f:
         judged_result = json.load(f)

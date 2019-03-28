@@ -73,5 +73,3 @@ def caculate_AP(arr):
             precision_threshold += 1
             AP += precision_threshold / (index + 1) / relevan_len
     return AP
-
-print('assad')
