@@ -145,7 +145,7 @@ def search_by_query_pool():
 
 
 def statistic_search_result():
-    judged_results_path = glob.glob("./elastic/judged/tmp/*.json")
+    judged_results_path = glob.glob("./elastic/judged/train/*.json")
     count_questions = len(judged_results_path)
     total_pair = 0
     total_good = 0
@@ -211,7 +211,7 @@ def caculate_AP(path):
 
 
 def caculate_mAP():
-    paths = glob.glob("./elastic/judged/tmp/*.json")
+    paths = glob.glob("./elastic/judged/train/*.json")
     arr_AP = []
     for path in paths:
         arr_AP.append(caculate_AP(path))
