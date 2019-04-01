@@ -211,7 +211,7 @@ def caculate_AP(path):
 
 
 def caculate_mAP():
-    paths = glob.glob("./elastic/judged/train/*.json")
+    paths = glob.glob("./elastic/judged/test/*.json")
     arr_AP = []
     for path in paths:
         arr_AP.append(caculate_AP(path))
@@ -223,7 +223,6 @@ def caculate_mAP():
     print('radian AP: ', np.median(nparr_AP))
 
     print('sort: ', np.sort(nparr_AP))
-    dfarr_ap = DataFrame()
 
-statistic_search_result()
+# statistic_search_result()
 caculate_mAP()

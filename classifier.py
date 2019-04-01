@@ -3,6 +3,8 @@ import pandas as pd
 import convenion
 import json
 import glob
+import os.path
+import pandas as pd
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -49,6 +51,13 @@ def test_model():
     score = model.evaluate(X_test, y_test, verbose=1)
     print(score)
 
+#
+# def raw_test_result():
+#
+#
+# def caculate_MAP():
+
+
 
 
 def raw_data(path_regex):
@@ -75,13 +84,13 @@ def raw_data(path_regex):
                     simple_preprocess(word_tokenize(judged_question, format='text')))
                 judged_q_vector = np.array(judged_q_vector)
 
-                arr_concat = np.concatenate((org_q_vector, judged_q_vector))
+                concat_vector = np.concatenate((org_q_vector, judged_q_vector))
 
                 label = 0
                 if hit['relate_q_q'] == 1 or hit['relate_q_q'] == 2:
                     label = 1
 
-                X_raw.append(arr_concat)
+                X_raw.append(concat_vector)
                 y_raw.append(label)
 
     X_raw = np.array(X_raw)
@@ -151,4 +160,113 @@ def create_validation_data(X_dev, y_dev):
 #
 # train_model(X_train, y_train, (X_dev, y_dev))
 # test_model()
-load_raw_data()
+# load_raw_data()
+
+def raw_to_file():
+    PATH_JUDGED_EXAMPLE = 'elastic/judged/train/17630743.json'
+    PATH_TRAIN_REGEX = './elastic/judged/train/*.json'
+    PATH_DEV_REGEX = './elastic/judged/dev/*.json'
+    PATH_TEST_REGEX = './elastic/judged/test/*.json'
+
+    path_judgeds = glob.glob(PATH_TEST_REGEX)
+    with open('data/test.txt', 'w+') as raw_file:
+        for path_judged in path_judgeds:
+            with open(path_judged, 'r') as file_judged:
+                judged_result = json.load(file_judged)
+
+                origin_question = judged_result['origin_question']
+                id_origin_q = judged_result['id_query']
+
+                for hit in judged_result['hits']:
+                    judged_question = hit['question']
+                    id_judged_q = hit['id']
+                    score_search = hit['score']
+                    label = '0'
+                    if hit['relate_q_q'] == 3:
+                        continue
+                    if hit['relate_q_q'] == 1 or hit['relate_q_q'] == 2:
+                        label = '1'
+
+                    # test = origin_question + '\t' + judged_question + '\t' + label
+                    # print(test)
+                    raw_file.write(id_origin_q + '\t' + origin_question + '\t' + judged_question + '\t' + label +
+                                   '\t' + str(score_search) + '\n')
+    raw_file.close()
+
+
+
+def evaluate_classify_model():
+    test_df = pd.read_csv('data/test.txt',
+                          sep='\t',
+                          header=None,
+                          names=['id', 'origin_q', 'compare_q', 'label', 'score_elastic'],
+                          )
+    test_df['predict'] = 0.01
+
+    doc2vec_model = Doc2Vec.load('gensim/model/question.d2v')
+    classify_model = load_model('model/simple_classify_model.h5')
+
+    for index, row in test_df.iterrows():
+        origin_q = row['origin_q']
+        compare_q = row['compare_q']
+
+        origin_q_vector = doc2vec_model.infer_vector(simple_preprocess(word_tokenize(origin_q, format='text')))
+        compare_q_vector = doc2vec_model.infer_vector(simple_preprocess(word_tokenize(compare_q, format='text')))
+        concat_vector = np.concatenate((origin_q_vector, compare_q_vector))
+        arr_wraper = np.array([concat_vector])
+
+        test_df.at[index, 'predict'] = classify_model.predict(arr_wraper)[0][0]
+
+    test = test_df.loc[test_df['id'] == 22972022]
+    test_sort = test.sort_values(by='predict', ascending=False).reset_index(drop=True)
+
+    id_queries = []
+    for id_query in test_df['id']:
+        if id_query not in id_queries:
+            id_queries.append(id_query)
+
+    mAP_df = pd.DataFrame(data=id_queries, columns=['id'])
+
+    score_AP_model_alls = []
+    score_AP_model_top10 = []
+    score_AP_elastic_alls = []
+    score_AP_elastic_top10 = []
+    for id_query in mAP_df['id']:
+        group_id = test_df.loc[test_df['id'] == id_query]
+
+        # Caculate mAP model
+        group_predict_sort = group_id.sort_values(
+            by='predict',
+            ascending=False).reset_index(drop=True)
+
+        AP_model_all = convenion.caculate_AP(group_predict_sort['label'])
+        AP_model_top10 = convenion.caculate_AP(group_predict_sort['label'][:10])
+
+        score_AP_model_alls.append(AP_model_all)
+        score_AP_model_top10.append(AP_model_top10)
+
+        # Caculate mAP elastic search
+        group_elastic_sort = group_id.sort_values(
+            by='score_elastic',
+            ascending=False).reset_index(drop=True)
+        AP_elastic_all = convenion.caculate_AP(group_elastic_sort['label'])
+        AP_elastic_top10 = convenion.caculate_AP(group_elastic_sort['label'][:10])
+
+        score_AP_elastic_alls.append(AP_elastic_all)
+        score_AP_elastic_top10.append(AP_elastic_top10)
+
+    mAP_df['AP_model_all'] = score_AP_model_alls
+    mAP_df['AP_model_top10'] = score_AP_model_top10
+
+    mAP_df['AP_elastic_all'] = score_AP_elastic_alls
+    mAP_df['AP_elastic_top10'] = score_AP_elastic_top10
+
+    print('mAP elastic all: ', sum(score_AP_elastic_alls) / len(score_AP_elastic_alls))
+    print('mAP model all: ', sum(score_AP_model_alls) / len(score_AP_model_alls))
+    print('mAP elastic top10: ', sum(score_AP_elastic_top10) / len(score_AP_elastic_top10))
+    print('mAP model top10: ', sum(score_AP_model_top10) / len(score_AP_model_top10))
+
+    return mAP_df
+
+
+mAP_df = evaluate_classify_model()
