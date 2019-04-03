@@ -55,4 +55,31 @@ def test_model():
     # print(model.infer_vector(['còn', 'hàng', 'không']))
 
 
-test_model()
+model = Doc2Vec.load('gensim/model/question.d2v')
+# with open('data/lstm/vocab_all.txt', 'w+') as f:
+#     vocab = model.wv.vocab
+#
+#     for key, _ in vocab.items():
+#         index = vocab[key].index
+#         f.write(str(index) + '\t' + key)
+#         f.write('\n')
+# f.close()
+word_vectors = model.wv
+from gensim.models import KeyedVectors
+# from gensim.test.utils import get_tmpfile
+#
+# fname = get_tmpfile("vectors.kv")
+# word_vectors.save(fname)
+
+word_vectors.word_vec('pin')
+with open('data/lstm/vectors.txt', 'w+') as f:
+    vocab = model.wv.vocab
+    for key, _ in vocab.items():
+        word_vector = word_vectors.word_vec(key)
+        wv_str = ''
+        for num in word_vector:
+            wv_str += str(num)
+            wv_str += ' '
+        f.write(key + ' ' + wv_str)
+        f.write('\n')
+    f.close()
