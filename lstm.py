@@ -5,6 +5,19 @@ import string
 import numpy as np
 from underthesea import word_tokenize
 
+from keras import backend as K
+from keras.layers import Embedding
+from keras.layers import LSTM, Input, dot, Lambda, GlobalMaxPool1D, Dense, Dropout, concatenate, CuDNNLSTM, BatchNormalization
+from keras.layers.wrappers import Bidirectional
+from keras.models import Model
+import pickle
+from sklearn.metrics.pairwise import cosine_similarity
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.optimizers import Adam
+from keras.callbacks import Callback
+from keras import regularizers
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 import logging
 from gensim.models import Word2Vec
 import pickle
@@ -13,23 +26,21 @@ from keras.layers.embeddings import Embedding
 from tensorflow.contrib import learn
 import random
 
-from keras import backend as K
-from keras.layers import Embedding
-from keras.layers import LSTM, Input, dot, Lambda, GlobalMaxPool1D, Dense, Dropout, concatenate, CuDNNLSTM, BatchNormalization
-from keras.layers.wrappers import Bidirectional
-from keras.models import Model
-from sklearn.metrics.pairwise import cosine_similarity
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.optimizers import Adam
-from keras.callbacks import Callback
-from keras import regularizers
-from keras.preprocessing.text import Tokenizer
+
+import logging
+from gensim.models import Word2Vec
+import pickle
 from keras.preprocessing.sequence import pad_sequences
+from keras.layers.embeddings import Embedding
+from tensorflow.contrib import learn
+import random
 
 
+# from google.colab import drive
+# drive.mount('/content/driver/')
+
+import nltk
 nltk.download('punkt')
-
-PRE_TRAIN_WORD_EMBEDDING_SIZE = 200
 
 
 def clean_str(string):
@@ -66,8 +77,8 @@ def url_elimination(text):
     return output
 
 
-def tokenize(text):
-    text = url_elimination(text)
+def tokenize(text) :
+    # text = url_elimination(text)
     return [w.lower() for w in word_tokenize(text, format='text')]
 
 
@@ -95,13 +106,12 @@ def replace_numbers(words):
 
 
 def clean(text):
-    text = clean_str(text)
+    # text = clean_str(text)
     words = tokenize(text)
-    words = remove_non_ascii(words)
-    words = remove_punctuation2(words)
-    words = replace_numbers(words)
+    # words = remove_non_ascii(words)
+    # words = remove_punctuation2(words)
+    # words = replace_numbers(words)
     return ' '.join(words)
-    #return words
 
 
 def get_modified_data(FILE_PATH):
@@ -114,6 +124,7 @@ def get_modified_data(FILE_PATH):
             temp[i] = clean(temp[i])
         data_processed.append(temp)
     f.close()
+    print(data_processed[:10])
     return data_processed
 
 
@@ -126,7 +137,7 @@ def build_corpus(FILE_PATH):
         questions.extend([data_processed[i][0]])
         answers.append([data_processed[i][1]])
         labels.append(int(data_processed[i][2]))
-    return (questions, answers, labels)
+    return questions, answers, labels
 
 
 def sentence_to_vec(sentence, vocab):
@@ -142,7 +153,7 @@ def sentence_to_vec(sentence, vocab):
 
 def turn_to_vector(list_to_transform, vocab):
     # vocab_size = 44604
-    pad = 150
+    # pad = 150
     encoded_list = [sentence_to_vec(str(d), vocab) for d in list_to_transform]
     padded_list = pad_sequences(encoded_list, maxlen=150, padding='post', truncating='post')
     return padded_list
@@ -150,8 +161,7 @@ def turn_to_vector(list_to_transform, vocab):
 
 def get_index(word, vocab):
     return vocab[word]
-
-
+#
 # def create_model(FILE_PATH):
 #     prep = preprocess.PreprocessData()
 #     data_processed = prep.get_modified_data(FILE_PATH)
@@ -169,7 +179,7 @@ def get_index(word, vocab):
 
 
 def create_vocab_with_index(model):
-    with open('data/lstm/vocab_all.txt', 'w+') as f:
+    with open('/content/driver/My Drive/DATN/vocab_all.txt', 'w') as f:
         vocab = model.wv.vocab
         for key, _ in vocab.items():
             index = vocab[key].index
@@ -189,7 +199,7 @@ def create_vocab_dict():
 
 
 def get_glove_vectors():
-    N = 200
+    # N = 200
     g = dict()
     file_path = 'data/lstm/vectors.txt'
 
@@ -198,17 +208,16 @@ def get_glove_vectors():
             temp = line.split()
             word = temp[0]
             g[word] = np.array(temp[1:]).astype(float)
-            print(len(g[word]))
     return g
 
 
 def embmatrix(g, vocab):
-    embedding_weights = np.zeros((len(vocab) + 1, PRE_TRAIN_WORD_EMBEDDING_SIZE), dtype=float)
+    embedding_weights = np.zeros((len(vocab) + 1, 200), dtype=float)
     for word in vocab.keys():
         if word in g:
             embedding_weights[int(vocab[word]), :] = np.array(g[word])
         else:
-            embedding_weights[int(vocab[word]), :] = np.random.uniform(-1, 1, PRE_TRAIN_WORD_EMBEDDING_SIZE)
+            embedding_weights[int(vocab[word]), :] = np.random.uniform(-1, 1, 200)
     return embedding_weights
 
 
@@ -241,7 +250,7 @@ def map_score(s1s_dev, s2s_dev, y_pred, labels_dev):
 
                 p += 1
                 AP += p / (idx + 1)
-        if (p == 0):
+        if p == 0:
             AP = 0
         else:
             AP /= p
@@ -269,18 +278,18 @@ class AnSelCB(Callback):
 def get_bilstm_model(vocab_size, vocab):
     enc_timesteps = 150
     dec_timesteps = 150
-    hidden_dim = 128
+    # hidden_dim = 128
 
     question = Input(shape=(enc_timesteps,),
                      dtype='int32', name='question_base')
     answer = Input(shape=(dec_timesteps,), dtype='int32', name='answer')
 
-    glove_vectors = get_glove_vectors()
-    weights = embmatrix(glove_vectors, vocab)
+    g = get_glove_vectors()
+    weights = embmatrix(g, vocab)
     qa_embedding = Embedding(
         input_dim=vocab_size + 1, input_length=150, output_dim=weights.shape[1], mask_zero=False, weights=[weights])
     bi_lstm = Bidirectional(
-        LSTM(units=750, return_sequences=False, activation='tanh'))
+        CuDNNLSTM(units=750, return_sequences=False))
 
     question_embedding = qa_embedding(question)
     question_embedding = Dropout(0.75)(question_embedding)
@@ -310,56 +319,58 @@ def get_bilstm_model(vocab_size, vocab):
     return training_model
 
 
-# ==============================
-# Train
-# vocab = create_vocab_dict()
-# vocab_len = len(vocab)
-#
-# training_model = get_bilstm_model(vocab_len, vocab)
-#
-# questions, answers, labels = build_corpus('data/lstm/test_lstm.txt')
-#
-# q_dev, a_dev, l_dev = build_corpus('data/dev.txt')
-#
-# # questions, answers = turn_to_vector(questions, answers, tok)
-# # q_dev_eb, a_dev_eb = turn_to_vector(q_dev, a_dev, tok)
-# questions = turn_to_vector(questions, vocab)
-# answers = turn_to_vector(answers, vocab)
-# q_dev_eb = turn_to_vector(q_dev, vocab)
-# a_dev_eb = turn_to_vector(a_dev, vocab)
-# Y = np.array(labels)
-# callback_list = [AnSelCB(q_dev, a_dev, l_dev, [q_dev_eb, a_dev_eb]),
-#                          ModelCheckpoint('model_CuDNNimprovement-{epoch:02d}-{map:.2f}.h5', monitor='map', verbose=1, save_best_only=True, mode='max'),
-#                          EarlyStopping(monitor='map', mode='max', patience=22)]
-# training_model.fit(
-#     [questions, answers],
-#     Y,
-#     epochs=100,
-#     batch_size=160,
-#     validation_data=([q_dev_eb, a_dev_eb], l_dev),
-#     verbose=1,
-#     callbacks= callback_list
-# )
-# training_model.summary()
+def train():
+    vocab = create_vocab_dict()
+    vocab_len = len(vocab)
 
-# ===================================
-# Test
-vocab = create_vocab_dict()
-vocab_len = len(vocab)
+    training_model = get_bilstm_model(vocab_len, vocab)
 
-training_model = get_bilstm_model(vocab_len, vocab)
-training_model.load_weights('/content/model_CuDNNimprovement-43-0.64.h5')
+    questions, answers, labels = build_corpus('/content/driver/My Drive/DATN/train.txt')
 
-questions, answers, labels = build_corpus('/content/drive/My Drive/CQA/test.txt')
-print (len(questions))
+    q_dev, a_dev, l_dev = build_corpus('/content/driver/My Drive/DATN/dev.txt')
 
-questions_eb = turn_to_vector(questions, vocab)
-answers_eb = turn_to_vector(answers, vocab)
+    # questions, answers = turn_to_vector(questions, answers, tok)
+    # q_dev_eb, a_dev_eb = turn_to_vector(q_dev, a_dev, tok)
+    questions = turn_to_vector(questions, vocab)
+    answers = turn_to_vector(answers, vocab)
+    q_dev_eb = turn_to_vector(q_dev, vocab)
+    a_dev_eb = turn_to_vector(a_dev, vocab)
+    Y = np.array(labels)
+    callback_list = [AnSelCB(q_dev, a_dev, l_dev, [q_dev_eb, a_dev_eb]),
+                     ModelCheckpoint('model_CuDNNimprovement-{epoch:02d}-{map:.2f}.h5', monitor='map', verbose=1, save_best_only=True, mode='max'),
+                     EarlyStopping(monitor='map', mode='max', patience=22)]
+    training_model.fit(
+        [questions, answers],
+        Y,
+        epochs=100,
+        batch_size=80,
+        validation_data=([q_dev_eb, a_dev_eb], l_dev),
+        verbose=1,
+        callbacks=callback_list
+    )
+    training_model.summary()
 
-Y = np.array(labels)
 
-sims = training_model.predict([questions_eb, answers_eb])
+def test_model():
+    vocab = create_vocab_dict()
+    vocab_len = len(vocab)
 
-MAP, MRR = map_score(questions, answers, sims, labels)
-print("MAP: ", MAP)
-print("MRR: ", MRR)
+    training_model = get_bilstm_model(vocab_len, vocab)
+    training_model.load_weights('model/bi-lstm/model_CuDNNimprovement-01-0.28.h5')
+
+    questions, answers, labels = build_corpus('data/lstm/test_lstm.txt')
+    print(len(questions))
+
+    questions_eb = turn_to_vector(questions, vocab)
+    answers_eb = turn_to_vector(answers, vocab)
+
+    # Y = np.array(labels)
+
+    sims = training_model.predict([questions_eb, answers_eb])
+
+    MAP, MRR = map_score(questions, answers, sims, labels)
+    print("MAP: ", MAP)
+    print("MRR: ", MRR)
+
+
+test_model()
